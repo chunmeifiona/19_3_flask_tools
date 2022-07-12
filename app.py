@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, flash
+from flask import Flask, request, render_template, redirect, flash, session
 from flask_debugtoolbar import DebugToolbarExtension
 from surveys import satisfaction_survey as survey
 
@@ -13,14 +13,22 @@ responses = []
 @app.route("/")
 def go_homepage():
     """shows home page"""
+    print("*******************go_homepage")
     return render_template("home.html", survey_title = survey.title, survey_instruction = survey.instructions)
+
+@app.route("/begin", methods =["POST"])
+def start_survey():
+    print("******************start_survey")
+    session["responses"]=[]
+    return redirect("/questions/0")
 
 @app.route("/questions/<int:idx>")
 def go_question(idx):
-    if len(responses) != idx and len(responses) < len(survey.questions):
+    len_res = len(session["responses"])
+    if len(session["responses"]) != idx and len_res < len(survey.questions):
         flash("Cannot access an invalid question")
-        return redirect(f"/questions/{len(responses)}")
-    elif len(responses) >= len(survey.questions):
+        return redirect(f"/questions/{len_res}")
+    elif len_res >= len(survey.questions):
         print("finish-1")
         return redirect("/finished")
     else:
@@ -29,17 +37,25 @@ def go_question(idx):
 
 @app.route("/answer", methods=["POST"])
 def handle_question():
-    if len(responses) == len(survey.questions):
+    if len(session["responses"]) == len(survey.questions):
         print("finish-2")
         return redirect("/finished")
     else:
+        print("******************handoe question, not finished")
+        # import pdb
+        # pdb.set_trace()
         answer = request.form['answer']
+        
+        responses = session["responses"]
         responses.append(answer)
-        return redirect(f"/questions/{len(responses)}")
+        session["responses"] = responses
+
+        len_res = len(session["responses"])
+        return redirect(f"/questions/{len_res}")
 
 @app.route("/finished")
 def finish_page():
-    return render_template("finished.html", responses=responses)
+    return render_template("finished.html")
 
 
 
